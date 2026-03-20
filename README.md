@@ -1,6 +1,6 @@
 # MiniPay PSP — Payment Service Provider Backend
 
-[![CI](https://github.com/Delightifechukwu/minipay-psp/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/minipay-psp/actions)
+[![CI](https://github.com/Delightifechukwu/minipay-psp/actions/workflows/ci.yml/badge.svg)](https://github.com/Delightifechukwu/minipay-psp/actions)
 [![Coverage](.github/badges/coverage.svg)](target/site/jacoco/index.html)
 [![Java](https://img.shields.io/badge/Java-17-blue)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen)](https://spring.io/projects/spring-boot)
