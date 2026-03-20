@@ -10,7 +10,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reports")
+@RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
 @Tag(name = "Reports", description = "Transaction and settlement reports with CSV/XLSX export")
 @SecurityRequirement(name = "bearerAuth")

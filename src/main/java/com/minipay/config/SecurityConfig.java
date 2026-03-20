@@ -43,21 +43,21 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers(
-                    "/api/auth/login",
-                    "/api/auth/refresh",
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/refresh",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/api-docs/**",
                     "/actuator/health"
                 ).permitAll()
                 // Admin only
-                .requestMatchers(HttpMethod.POST, "/api/auth/register").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").hasRole("ADMIN")
                 // Simulate processor callback — internal use
-                .requestMatchers("/api/simulate/**").hasAnyRole("ADMIN", "MAKER")
+                .requestMatchers("/api/v1/simulate/**").hasAnyRole("ADMIN", "MAKER")
                 // Settlement generation — ADMIN only
-                .requestMatchers(HttpMethod.POST, "/api/settlements/generate").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/settlements/generate").hasRole("ADMIN")
                 // Checker approval endpoints
-                .requestMatchers("/api/approvals/**").hasAnyRole("ADMIN", "CHECKER")
+                .requestMatchers("/api/v1/approvals/**").hasAnyRole("ADMIN", "CHECKER")
                 // All other authenticated
                 .anyRequest().authenticated()
             )

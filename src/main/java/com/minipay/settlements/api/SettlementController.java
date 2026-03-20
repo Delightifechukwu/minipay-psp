@@ -16,7 +16,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/settlements")
+@RequestMapping("/api/v1/settlements")
 @RequiredArgsConstructor
 @Tag(name = "Settlements", description = "Settlement batch generation and retrieval")
 @SecurityRequirement(name = "bearerAuth")

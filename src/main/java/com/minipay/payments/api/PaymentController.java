@@ -23,7 +23,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @PostMapping("/api/payments")
+    @PostMapping("/api/v1/payments")
     @Operation(
         summary = "Initiate a payment",
         description = "Supply `Idempotency-Key` header for safe retries. " +
@@ -43,14 +43,14 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPayment(paymentRef));
     }
 
-    @GetMapping("/api/payments")
+    @GetMapping("/api/v1/payments")
     @Operation(summary = "List payments with filters and pagination")
     public ResponseEntity<PageResponse<PaymentResponse>> listPayments(
             @ModelAttribute PaymentFilter filter) {
         return ResponseEntity.ok(paymentService.listPayments(filter));
     }
 
-    @PostMapping("/api/simulate/processor-callback")
+    @PostMapping("/api/v1/simulate/processor-callback")
     @PreAuthorize("hasAnyRole('ADMIN','MAKER')")
     @Operation(
         summary = "Simulate processor callback (test/dev only)",

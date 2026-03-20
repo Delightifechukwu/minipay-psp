@@ -13,6 +13,7 @@ import com.minipay.settlements.repo.SettlementBatchRepository;
 import com.minipay.settlements.repo.SettlementItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.data.domain.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class SettlementService {
      * Settles the previous calendar day.
      */
     @Scheduled(cron = "${app.settlement.cron:0 0 1 * * *}")
+    @SchedulerLock(name = "dailySettlement", lockAtMostFor = "PT55M", lockAtLeastFor = "PT5M")
     @Transactional
     public void runDailySettlement() {
         LocalDate yesterday = LocalDate.now(ZoneId.of("Africa/Lagos")).minusDays(1);

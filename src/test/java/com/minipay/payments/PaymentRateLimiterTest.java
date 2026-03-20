@@ -4,11 +4,23 @@ import com.minipay.common.errors.RateLimitExceededException;
 import com.minipay.config.RateLimitProperties;
 import com.minipay.payments.service.PaymentRateLimiter;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentRateLimiter Unit Tests")
 class PaymentRateLimiterTest {
+
+    @Mock StringRedisTemplate redisTemplate;
 
     private PaymentRateLimiter rateLimiter;
 
@@ -18,45 +30,47 @@ class PaymentRateLimiterTest {
         props.setCapacity(2);
         props.setRefillTokens(2);
         props.setRefillSeconds(60);
-        rateLimiter = new PaymentRateLimiter(props);
+        rateLimiter = new PaymentRateLimiter(props, redisTemplate);
     }
 
     @Test
     @DisplayName("First request within limit is allowed")
     void checkLimit_withinCapacity_noException() {
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
+                .thenReturn(1L);
+
         assertThatNoException().isThrownBy(() -> rateLimiter.checkLimit("merchant-A"));
     }
 
     @Test
     @DisplayName("Requests beyond capacity throw RateLimitExceededException")
     void checkLimit_exceedsCapacity_throws() {
-        rateLimiter.checkLimit("merchant-B");
-        rateLimiter.checkLimit("merchant-B"); // capacity = 2, so this is still fine
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
+                .thenReturn(3L); // above capacity of 2
+        when(redisTemplate.getExpire(anyString(), eq(TimeUnit.SECONDS))).thenReturn(30L);
+
         assertThatThrownBy(() -> rateLimiter.checkLimit("merchant-B"))
                 .isInstanceOf(RateLimitExceededException.class)
                 .hasMessageContaining("merchant-B");
     }
 
     @Test
-    @DisplayName("Different merchants have separate buckets")
-    void checkLimit_differentMerchants_separateBuckets() {
-        // Exhaust merchant-C bucket
-        rateLimiter.checkLimit("merchant-C");
-        rateLimiter.checkLimit("merchant-C");
-        assertThatThrownBy(() -> rateLimiter.checkLimit("merchant-C"))
-                .isInstanceOf(RateLimitExceededException.class);
+    @DisplayName("Redis unavailable fails open — request is allowed through")
+    void checkLimit_redisUnavailable_allowsRequest() {
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
+                .thenThrow(new RuntimeException("Connection refused"));
 
-        // merchant-D should still be unaffected
-        assertThatNoException().isThrownBy(() -> rateLimiter.checkLimit("merchant-D"));
+        assertThatNoException().isThrownBy(() -> rateLimiter.checkLimit("merchant-C"));
     }
 
     @Test
     @DisplayName("Rate limit exception carries retry-after seconds")
     void checkLimit_exceeded_hasRetryAfter() {
-        rateLimiter.checkLimit("merchant-E");
-        rateLimiter.checkLimit("merchant-E");
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
+                .thenReturn(5L);
+        when(redisTemplate.getExpire(anyString(), eq(TimeUnit.SECONDS))).thenReturn(45L);
 
-        assertThatThrownBy(() -> rateLimiter.checkLimit("merchant-E"))
+        assertThatThrownBy(() -> rateLimiter.checkLimit("merchant-D"))
                 .isInstanceOf(RateLimitExceededException.class)
                 .satisfies(ex -> {
                     RateLimitExceededException rle = (RateLimitExceededException) ex;

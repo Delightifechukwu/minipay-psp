@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/merchants")
+@RequestMapping("/api/v1/merchants")
 @RequiredArgsConstructor
 @Tag(name = "Merchants", description = "Merchant onboarding and management")
 @SecurityRequirement(name = "bearerAuth")

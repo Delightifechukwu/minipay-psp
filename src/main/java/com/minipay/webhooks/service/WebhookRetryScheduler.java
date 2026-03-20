@@ -5,6 +5,7 @@ import com.minipay.webhooks.domain.WebhookEvent;
 import com.minipay.webhooks.repo.WebhookEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +43,8 @@ public class WebhookRetryScheduler {
             .connectTimeout(Duration.ofSeconds(5))
             .build();
 
-    @Scheduled(fixedDelay = 5000) // poll every 5 seconds
+    @Scheduled(fixedDelay = 5000)
+    @SchedulerLock(name = "webhookRetryScheduler", lockAtMostFor = "PT4S", lockAtLeastFor = "PT1S")
     @Transactional
     public void processQueue() {
         List<WebhookEvent> dueEvents = webhookEventRepository.findDueForRetry(Instant.now());

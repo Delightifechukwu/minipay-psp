@@ -76,7 +76,7 @@ class PaymentFlowIntegrationTest {
         req.setUsername("admin");
         req.setPassword("Admin@123");
 
-        MvcResult result = mvc.perform(post("/api/auth/login")
+        MvcResult result = mvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -101,7 +101,7 @@ class PaymentFlowIntegrationTest {
         req.setSettlementBank("First Bank");
         req.setCallbackUrl("https://acme.example.com/webhook");
 
-        MvcResult result = mvc.perform(post("/api/merchants")
+        MvcResult result = mvc.perform(post("/api/v1/merchants")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
@@ -130,7 +130,7 @@ class PaymentFlowIntegrationTest {
         req.setPlatformProviderRate(new BigDecimal("1.0"));
         req.setPlatformProviderCap(new BigDecimal("1200"));
 
-        mvc.perform(put("/api/merchants/{id}/charge-settings", createdMerchantId)
+        mvc.perform(put("/api/v1/merchants/{id}/charge-settings", createdMerchantId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
@@ -152,7 +152,7 @@ class PaymentFlowIntegrationTest {
         req.setChannel("CARD");
         req.setCustomerId("CUST-001");
 
-        MvcResult result = mvc.perform(post("/api/payments")
+        MvcResult result = mvc.perform(post("/api/v1/payments")
                         .header("Authorization", "Bearer " + adminToken)
                         .header("Idempotency-Key", "idem-key-001")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -185,7 +185,7 @@ class PaymentFlowIntegrationTest {
         req.setCurrency("NGN");
         req.setChannel("CARD");
 
-        mvc.perform(post("/api/payments")
+        mvc.perform(post("/api/v1/payments")
                         .header("Authorization", "Bearer " + adminToken)
                         .header("Idempotency-Key", "idem-key-001") // same key
                         .contentType(MediaType.APPLICATION_JSON)
@@ -203,7 +203,7 @@ class PaymentFlowIntegrationTest {
         req.setPaymentRef(createdPaymentRef);
         req.setStatus("SUCCESS");
 
-        mvc.perform(post("/api/simulate/processor-callback")
+        mvc.perform(post("/api/v1/simulate/processor-callback")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
@@ -216,7 +216,7 @@ class PaymentFlowIntegrationTest {
     @Test @Order(7)
     @DisplayName("Payment status persisted as SUCCESS after callback")
     void getPaymentVerifySuccess() throws Exception {
-        mvc.perform(get("/api/payments/{ref}", createdPaymentRef)
+        mvc.perform(get("/api/v1/payments/{ref}", createdPaymentRef)
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
@@ -232,7 +232,7 @@ class PaymentFlowIntegrationTest {
         req.setPaymentRef(createdPaymentRef);
         req.setStatus("FAILED");
 
-        mvc.perform(post("/api/simulate/processor-callback")
+        mvc.perform(post("/api/v1/simulate/processor-callback")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
@@ -247,7 +247,7 @@ class PaymentFlowIntegrationTest {
     void generateSettlement() throws Exception {
         String today = java.time.LocalDate.now().toString();
 
-        mvc.perform(post("/api/settlements/generate")
+        mvc.perform(post("/api/v1/settlements/generate")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("from", today)
                         .param("to", today))
@@ -262,7 +262,7 @@ class PaymentFlowIntegrationTest {
     @Test @Order(10)
     @DisplayName("Transaction report returns paginated results")
     void transactionReport() throws Exception {
-        mvc.perform(get("/api/reports/transactions")
+        mvc.perform(get("/api/v1/reports/transactions")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("merchantId", createdMerchantId))
                 .andDo(print())
@@ -274,7 +274,7 @@ class PaymentFlowIntegrationTest {
     @Test @Order(11)
     @DisplayName("Transaction report CSV export returns 200 with correct content-type")
     void transactionCsvExport() throws Exception {
-        mvc.perform(get("/api/reports/transactions")
+        mvc.perform(get("/api/v1/reports/transactions")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("format", "CSV"))
                 .andDo(print())

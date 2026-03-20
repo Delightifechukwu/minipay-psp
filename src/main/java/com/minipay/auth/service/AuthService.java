@@ -5,11 +5,11 @@ import com.minipay.auth.dto.AuthDtos.*;
 import com.minipay.auth.repo.*;
 import com.minipay.common.errors.*;
 import com.minipay.config.JwtProperties;
-import io.github.bucket4j.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.security.authentication.*;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -34,9 +34,19 @@ public class AuthService {
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
     private final AuthenticationManager authenticationManager;
+    private final StringRedisTemplate redisTemplate;
 
-    // In-memory rate limiter per username (5 attempts / 60 seconds)
-    private final Map<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
+    private static final DefaultRedisScript<Long> LOGIN_RATE_SCRIPT;
+    static {
+        LOGIN_RATE_SCRIPT = new DefaultRedisScript<>();
+        LOGIN_RATE_SCRIPT.setScriptText(
+                "local c = redis.call('INCR', KEYS[1]) " +
+                "if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end return c");
+        LOGIN_RATE_SCRIPT.setResultType(Long.class);
+    }
+
+    private static final int LOGIN_CAPACITY   = 5;
+    private static final int LOGIN_WINDOW_SEC = 60;
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
@@ -140,19 +150,22 @@ public class AuthService {
     }
 
     private void checkLoginRateLimit(String username) {
-        Bucket bucket = loginBuckets.computeIfAbsent(username, k ->
-                Bucket.builder()
-                        .addLimit(Bandwidth.builder()
-                                .capacity(5)
-                                .refillIntervally(5, Duration.ofSeconds(60))
-                                .build())
-                        .build()
-        );
-        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-        if (!probe.isConsumed()) {
-            long retryAfter = probe.getNanosToWaitForRefill() / 1_000_000_000;
-            throw new RateLimitExceededException(
-                    "Too many login attempts. Try again later.", retryAfter);
+        String key = "rate:login:" + username;
+        try {
+            Long count = redisTemplate.execute(
+                    LOGIN_RATE_SCRIPT,
+                    List.of(key),
+                    String.valueOf(LOGIN_WINDOW_SEC));
+            if (count != null && count > LOGIN_CAPACITY) {
+                Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+                long retryAfter = (ttl != null && ttl > 0) ? ttl : LOGIN_WINDOW_SEC;
+                throw new RateLimitExceededException(
+                        "Too many login attempts. Try again later.", retryAfter);
+            }
+        } catch (RateLimitExceededException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Redis login rate limiter unavailable for {}, allowing through", username, e);
         }
     }
 

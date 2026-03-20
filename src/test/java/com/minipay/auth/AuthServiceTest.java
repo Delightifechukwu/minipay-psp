@@ -17,6 +17,8 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,7 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +43,7 @@ class AuthServiceTest {
     @Mock JwtService jwtService;
     @Mock JwtProperties jwtProperties;
     @Mock AuthenticationManager authenticationManager;
+    @Mock StringRedisTemplate redisTemplate;
 
     @InjectMocks AuthService authService;
 
@@ -139,6 +142,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("Login succeeds and returns access + refresh tokens")
     void login_success() {
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(1L);
         when(userRepository.findByUsernameWithRoles("admin")).thenReturn(Optional.of(adminUser));
         when(jwtService.generateAccessToken(adminUser)).thenReturn("access-token");
         when(jwtProperties.getRefreshTtlHours()).thenReturn(24L);
@@ -159,6 +163,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("Login throws BadCredentialsException on wrong password")
     void login_badCredentials_throws() {
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(1L);
         doThrow(new BadCredentialsException("bad creds"))
                 .when(authenticationManager).authenticate(any());
 

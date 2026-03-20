@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/approvals")
+@RequestMapping("/api/v1/approvals")
 @RequiredArgsConstructor
 @Tag(name = "Approvals", description = "MAKER/CHECKER approval workflow")
 @SecurityRequirement(name = "bearerAuth")

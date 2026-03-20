@@ -69,8 +69,19 @@ app:
   settlement:
     cron: "0 0 1 * * *"   # 1 AM daily
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  servlet:
+    multipart:
+      max-request-size: 10MB
+      max-file-size: 10MB
+
 server:
   port: 8080
+  shutdown: graceful
+  tomcat:
+    max-http-form-post-size: 2MB
   error:
     include-message: always
     include-binding-errors: always
@@ -86,6 +97,12 @@ management:
   info:
     env:
       enabled: true
+  tracing:
+    sampling:
+      probability: ${TRACING_PROBABILITY:0.1}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
 
 springdoc:
   api-docs:
