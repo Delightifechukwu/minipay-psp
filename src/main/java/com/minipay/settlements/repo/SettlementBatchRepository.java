@@ -20,9 +20,9 @@ public interface SettlementBatchRepository extends JpaRepository<SettlementBatch
 
     @Query("""
         SELECT b FROM SettlementBatch b
-        WHERE (:merchantId IS NULL OR b.merchant.merchantId = :merchantId)
-          AND (:from IS NULL OR b.periodStart >= :from)
-          AND (:to   IS NULL OR b.periodEnd   <= :to)
+        WHERE (cast(:merchantId as String) IS NULL OR b.merchant.merchantId = cast(:merchantId as String))
+          AND (cast(:from as LocalDate) IS NULL OR b.periodStart >= cast(:from as LocalDate))
+          AND (cast(:to   as LocalDate) IS NULL OR b.periodEnd   <= cast(:to   as LocalDate))
         """)
     Page<SettlementBatch> findByFilters(
             @Param("merchantId") String merchantId,

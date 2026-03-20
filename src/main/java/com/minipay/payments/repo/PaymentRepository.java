@@ -26,11 +26,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("""
         SELECT p FROM Payment p
-        WHERE (:merchantId IS NULL OR p.merchant.merchantId = :merchantId)
-          AND (:channel   IS NULL OR p.channel = :channel)
-          AND (:status    IS NULL OR p.status  = :status)
-          AND (:from      IS NULL OR p.createdAt >= :from)
-          AND (:to        IS NULL OR p.createdAt <= :to)
+        WHERE (cast(:merchantId as String) IS NULL OR p.merchant.merchantId = cast(:merchantId as String))
+          AND (cast(:channel as String)   IS NULL OR p.channel = cast(:channel as String))
+          AND (cast(:status as String)    IS NULL OR p.status  = cast(:status as String))
+          AND (cast(:from as Instant)     IS NULL OR p.createdAt >= cast(:from as Instant))
+          AND (cast(:to as Instant)       IS NULL OR p.createdAt <= cast(:to as Instant))
         """)
     Page<Payment> findByFilters(
             @Param("merchantId") String merchantId,
@@ -55,11 +55,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // Used for reporting export — no pagination
     @Query("""
         SELECT p FROM Payment p
-        WHERE (:merchantId IS NULL OR p.merchant.merchantId = :merchantId)
-          AND (:channel   IS NULL OR p.channel = :channel)
-          AND (:status    IS NULL OR p.status  = :status)
-          AND (:from      IS NULL OR p.createdAt >= :from)
-          AND (:to        IS NULL OR p.createdAt <= :to)
+        WHERE (cast(:merchantId as String) IS NULL OR p.merchant.merchantId = cast(:merchantId as String))
+          AND (cast(:channel as String)   IS NULL OR p.channel = cast(:channel as String))
+          AND (cast(:status as String)    IS NULL OR p.status  = cast(:status as String))
+          AND (cast(:from as Instant)     IS NULL OR p.createdAt >= cast(:from as Instant))
+          AND (cast(:to as Instant)       IS NULL OR p.createdAt <= cast(:to as Instant))
         ORDER BY p.createdAt DESC
         """)
     List<Payment> findForExport(
