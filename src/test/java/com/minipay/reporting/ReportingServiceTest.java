@@ -10,7 +10,6 @@ import com.minipay.reporting.dto.ReportDtos.*;
 import com.minipay.reporting.service.ReportingService;
 import com.minipay.settlements.domain.SettlementBatch;
 import com.minipay.settlements.dto.SettlementDtos.SettlementBatchResponse;
-import com.minipay.settlements.dto.SettlementDtos.SettlementReportFilter;
 import com.minipay.settlements.repo.SettlementBatchRepository;
 import com.minipay.settlements.service.SettlementService;
 import org.junit.jupiter.api.*;
