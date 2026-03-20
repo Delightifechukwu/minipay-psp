@@ -9,6 +9,7 @@ on:
 env:
   JAVA_VERSION: '17'
   MAVEN_OPTS: '-Xmx1024m'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
 
