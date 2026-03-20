@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: minipay-postgres
+    environment:
+      POSTGRES_DB:       minipay
+      POSTGRES_USER:     minipay
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minipay -d minipay"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: minipay-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── MiniPay Application ───────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: minipay-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_URL:                   jdbc:postgresql://postgres:5432/minipay
+      DB_USER:                  minipay
+      DB_PASS:                  secret
+      REDIS_HOST:               redis
+      REDIS_PORT:               6379
+      JWT_SECRET:               ${JWT_SECRET:-minipay-dev-secret-change-in-production-256bits!!}
+      JWT_TTL_MIN:              ${JWT_TTL_MIN:-30}
+      JWT_REFRESH_TTL_H:        ${JWT_REFRESH_TTL_H:-24}
+      SPRING_PROFILES_ACTIVE:   ${SPRING_PROFILES_ACTIVE:-dev}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

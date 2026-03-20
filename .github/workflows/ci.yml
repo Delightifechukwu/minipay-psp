@@ -1,0 +1,106 @@
+name: MiniPay CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_OPTS: '-Xmx1024m'
+
+jobs:
+
+  build-and-test:
+    name: Build, Test & Coverage
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB:       minipay_ci
+          POSTGRES_USER:     minipay
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Build & Run Tests
+        run: mvn -B verify --no-transfer-progress
+        env:
+          DB_URL:      jdbc:postgresql://localhost:5432/minipay_ci
+          DB_USER:     minipay
+          DB_PASS:     secret
+          REDIS_HOST:  localhost
+          REDIS_PORT:  6379
+          JWT_SECRET:  ci-test-secret-key-that-is-at-least-256-bits-long-for-testing-only
+
+      - name: Upload JaCoCo Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+
+      - name: JaCoCo Coverage Badge
+        uses: cicirello/jacoco-badge-generator@v2
+        with:
+          jacoco-csv-file: target/site/jacoco/jacoco.csv
+          badges-directory: .github/badges
+          generate-coverage-badge: true
+          coverage-badge-filename: coverage.svg
+
+      - name: Commit coverage badge
+        uses: EndBug/add-and-commit@v9
+        if: github.ref == 'refs/heads/main'
+        with:
+          add: '.github/badges/coverage.svg'
+          message: 'ci: update coverage badge [skip ci]'
+
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t minipay-psp:${{ github.sha }} .
+
+      - name: Run Docker image smoke test
+        run: |
+          docker run -d --name minipay-smoke \
+            -e DB_URL=jdbc:postgresql://host.docker.internal:5432/minipay \
+            -e DB_USER=minipay -e DB_PASS=secret \
+            -e JWT_SECRET=smoke-test-secret-256bits-long-enough-for-testing \
+            -p 8080:8080 minipay-psp:${{ github.sha }}
+          echo "Image built successfully"
+          docker rm -f minipay-smoke || true

@@ -1,0 +1,108 @@
+spring:
+  application:
+    name: minipay-psp
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/minipay}
+    username: ${DB_USER:minipay}
+    password: ${DB_PASS:secret}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 50
+          fetch_size: 100
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+  mvc:
+    problem-details:
+      enabled: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:minipay-super-secret-key-change-in-production-must-be-256-bits}
+    ttl-minutes: ${JWT_TTL_MIN:30}
+    refresh-ttl-hours: ${JWT_REFRESH_TTL_H:24}
+  rate-limit:
+    login:
+      capacity: 5
+      refill-tokens: 5
+      refill-seconds: 60
+    payment:
+      capacity: 100
+      refill-tokens: 100
+      refill-seconds: 60
+  webhook:
+    retry:
+      max-attempts: 5
+      initial-delay-ms: 1000
+      multiplier: 2.0
+      max-delay-ms: 30000
+  settlement:
+    cron: "0 0 1 * * *"   # 1 AM daily
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui
+    operations-sorter: method
+    tags-sorter: alpha
+  info:
+    title: MiniPay PSP API
+    description: Payment Service Provider Backend
+    version: 1.0.0
+
+logging:
+  level:
+    com.minipay: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId}] %-5level %logger{36} - %msg%n"

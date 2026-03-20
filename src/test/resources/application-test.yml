@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16:///minipay?TC_REUSABLE=true
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: localhost
+      port: 6370   # Will be overridden by @DynamicPropertySource
+  task:
+    scheduling:
+      enabled: false
+
+app:
+  jwt:
+    secret: test-secret-key-that-is-at-least-256-bits-long-for-testing-purposes-only
+    ttl-minutes: 30
+    refresh-ttl-hours: 24
+
+logging:
+  level:
+    com.minipay: DEBUG
+    org.springframework.security: DEBUG
