@@ -54,6 +54,8 @@ public class SettlementDtos {
         private int size = 20;
         private String sortBy = "createdAt";
         private String sortDir = "desc";
+
+        public int getSize() { return Math.min(size, 100); }
     }
 
     @Data

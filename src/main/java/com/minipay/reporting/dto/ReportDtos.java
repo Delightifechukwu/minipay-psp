@@ -19,6 +19,8 @@ public class ReportDtos {
         private String sortBy = "createdAt";
         private String sortDir = "desc";
         private String format; // null = JSON, CSV, XLSX
+
+        public int getSize() { return Math.min(size, 100); }
     }
 
     @Data
@@ -31,5 +33,7 @@ public class ReportDtos {
         private String sortBy = "createdAt";
         private String sortDir = "desc";
         private String format; // null = JSON, CSV, XLSX
+
+        public int getSize() { return Math.min(size, 100); }
     }
 }

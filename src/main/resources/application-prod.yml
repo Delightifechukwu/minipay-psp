@@ -1,0 +1,19 @@
+# Production overrides — merged on top of application.yml when SPRING_PROFILES_ACTIVE=prod
+
+# Disable Swagger UI and OpenAPI docs in production
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Show full health details only to authenticated users (already default, explicit here)
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+  # Restrict sensitive actuator endpoints — prometheus secured in SecurityConfig
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

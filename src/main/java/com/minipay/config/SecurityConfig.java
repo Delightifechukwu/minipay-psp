@@ -64,6 +64,8 @@ public class SecurityConfig {
                 ).permitAll()
                 // Admin only
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").hasRole("ADMIN")
+                // Metrics — ADMIN only (scrape from internal network using a service account)
+                .requestMatchers("/actuator/prometheus", "/actuator/metrics/**").hasRole("ADMIN")
                 // Simulate processor callback — internal use
                 .requestMatchers("/api/v1/simulate/**").hasAnyRole("ADMIN", "MAKER")
                 // Settlement generation — ADMIN only
