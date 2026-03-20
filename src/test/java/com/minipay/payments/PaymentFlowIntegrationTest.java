@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -250,6 +251,7 @@ class PaymentFlowIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .param("from", today)
                         .param("to", today))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.batchesCreated").value(1))
                 .andExpect(jsonPath("$.totalTransactions").value(1));
@@ -263,6 +265,7 @@ class PaymentFlowIntegrationTest {
         mvc.perform(get("/api/reports/transactions")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("merchantId", createdMerchantId))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].status").value("SUCCESS"));
@@ -274,6 +277,7 @@ class PaymentFlowIntegrationTest {
         mvc.perform(get("/api/reports/transactions")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("format", "CSV"))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition",
                         org.hamcrest.Matchers.containsString("transactions.csv")));

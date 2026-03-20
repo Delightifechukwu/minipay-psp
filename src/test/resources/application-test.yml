@@ -13,15 +13,14 @@ spring:
     redis:
       host: localhost
       port: 6370   # Will be overridden by @DynamicPropertySource
-  task:
-    scheduling:
-      enabled: false
 
 app:
   jwt:
     secret: test-secret-key-that-is-at-least-256-bits-long-for-testing-purposes-only
     ttl-minutes: 30
     refresh-ttl-hours: 24
+  scheduling:
+    enabled: false
 
 logging:
   level:
