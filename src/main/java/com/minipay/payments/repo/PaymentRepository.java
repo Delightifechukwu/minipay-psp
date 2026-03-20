@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Modifying;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("merchantId") String merchantId,
             @Param("from")       Instant from,
             @Param("to")         Instant to);
+
+    @Modifying
+    @Query("UPDATE Payment p SET p.idempotencyKey = NULL WHERE p.idempotencyKey IS NOT NULL AND p.createdAt < :cutoff")
+    int clearIdempotencyKeysBefore(@Param("cutoff") Instant cutoff);
 
     // Used for reporting export — no pagination
     @Query("""

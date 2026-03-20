@@ -10,6 +10,9 @@ spring:
       maximum-pool-size: 20
       minimum-idle: 5
       connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 60000
 
   jpa:
     hibernate:
@@ -34,6 +37,12 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 5
+          min-idle: 2
+          max-wait: 2000ms
 
   jackson:
     serialization:
@@ -46,11 +55,21 @@ spring:
     problem-details:
       enabled: true
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  servlet:
+    multipart:
+      max-request-size: 10MB
+      max-file-size: 10MB
+
 app:
   jwt:
     secret: ${JWT_SECRET:minipay-super-secret-key-change-in-production-must-be-256-bits}
     ttl-minutes: ${JWT_TTL_MIN:30}
     refresh-ttl-hours: ${JWT_REFRESH_TTL_H:24}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   rate-limit:
     login:
       capacity: 5
@@ -69,14 +88,6 @@ app:
   settlement:
     cron: "0 0 1 * * *"   # 1 AM daily
 
-  lifecycle:
-    timeout-per-shutdown-phase: 30s
-
-  servlet:
-    multipart:
-      max-request-size: 10MB
-      max-file-size: 10MB
-
 server:
   port: 8080
   shutdown: graceful
@@ -94,6 +105,13 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
   info:
     env:
       enabled: true
@@ -103,6 +121,16 @@ management:
   zipkin:
     tracing:
       endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      webhookDelivery:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        register-health-indicator: true
 
 springdoc:
   api-docs:

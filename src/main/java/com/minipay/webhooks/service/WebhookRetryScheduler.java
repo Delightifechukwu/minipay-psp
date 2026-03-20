@@ -10,9 +10,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
-import java.net.http.*;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -28,6 +25,7 @@ import java.util.List;
  *   <li>Attempt 5: +8s → DLQ if fails</li>
  * </ul>
  * Events exceeding maxAttempts are promoted to DLQ status for manual review.
+ * HTTP delivery is protected by a Resilience4j circuit breaker (see WebhookHttpDelivery).
  */
 @Service
 @RequiredArgsConstructor
@@ -39,9 +37,7 @@ public class WebhookRetryScheduler {
     private static final long MAX_DELAY_MS        = 30_000L;
 
     private final WebhookEventRepository webhookEventRepository;
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private final WebhookHttpDelivery webhookHttpDelivery;
 
     @Scheduled(fixedDelay = 5000)
     @SchedulerLock(name = "webhookRetryScheduler", lockAtMostFor = "PT4S", lockAtLeastFor = "PT1S")
@@ -56,31 +52,24 @@ public class WebhookRetryScheduler {
 
     private void deliver(WebhookEvent event) {
         event.setAttemptCount(event.getAttemptCount() + 1);
-        String webhookSecret = event.getMerchant().getWebhookSecret();
-        String signature = WebhookSignatureUtil.sign(event.getPayload(), webhookSecret);
+        String signature = WebhookSignatureUtil.sign(
+                event.getPayload(), event.getMerchant().getWebhookSecret());
 
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(event.getTargetUrl()))
-                    .timeout(Duration.ofSeconds(10))
-                    .header("Content-Type", "application/json")
-                    .header("X-Signature", signature)
-                    .header("X-Event-Type", event.getEventType())
-                    .header("X-Attempt", String.valueOf(event.getAttemptCount()))
-                    .POST(HttpRequest.BodyPublishers.ofString(event.getPayload()))
-                    .build();
+            int statusCode = webhookHttpDelivery.send(
+                    event.getTargetUrl(),
+                    event.getPayload(),
+                    signature,
+                    event.getEventType(),
+                    event.getAttemptCount());
 
-            HttpResponse<String> response = httpClient.send(request,
-                    HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+            if (statusCode >= 200 && statusCode < 300) {
                 event.setStatus("SUCCESS");
                 event.setLastError(null);
                 log.info("Webhook delivered successfully: event={} attempt={} status={}",
-                        event.getId(), event.getAttemptCount(), response.statusCode());
+                        event.getId(), event.getAttemptCount(), statusCode);
             } else {
-                handleFailure(event,
-                        "HTTP " + response.statusCode() + ": " + truncate(response.body(), 200));
+                handleFailure(event, "HTTP " + statusCode);
             }
         } catch (Exception e) {
             handleFailure(event, e.getClass().getSimpleName() + ": " + truncate(e.getMessage(), 200));
