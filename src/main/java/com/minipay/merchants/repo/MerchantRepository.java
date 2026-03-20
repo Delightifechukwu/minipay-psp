@@ -19,7 +19,7 @@ public interface MerchantRepository extends JpaRepository<Merchant, Long> {
     @Query("""
         SELECT m FROM Merchant m
         WHERE (:status IS NULL OR m.status = :status)
-          AND (:name IS NULL OR LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%')))
+          AND (:name IS NULL OR LOWER(m.name) LIKE LOWER(CONCAT('%', cast(:name as String), '%')))
         """)
     Page<Merchant> findByFilters(@Param("status") String status, @Param("name") String name, Pageable pageable);
 
