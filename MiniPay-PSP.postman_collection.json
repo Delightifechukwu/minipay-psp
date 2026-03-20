@@ -1,0 +1,772 @@
+{
+  "info": {
+    "name": "MiniPay PSP API",
+    "_postman_id": "minipay-psp-collection-v1",
+    "description": "Complete API collection for MiniPay Payment Service Provider Backend.\n\n**Setup:**\n1. Set `baseUrl` variable to `http://localhost:8080`\n2. Run **Login as Admin** first — token is auto-saved\n3. Run **Create Merchant** — merchantId is auto-saved\n4. Run **Configure Charge Settings**\n5. Run **Initiate Payment** — paymentRef is auto-saved\n6. Run **Simulate SUCCESS Callback** to trigger webhook\n\n**Seed credentials:** admin / Admin@123",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",       "value": "http://localhost:8080", "type": "string" },
+    { "key": "token",         "value": "", "type": "string" },
+    { "key": "refreshToken",  "value": "", "type": "string" },
+    { "key": "merchantId",    "value": "", "type": "string" },
+    { "key": "paymentRef",    "value": "", "type": "string" },
+    { "key": "settlementRef", "value": "", "type": "string" },
+    { "key": "requestRef",    "value": "", "type": "string" },
+    { "key": "makerToken",    "value": "", "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('token', json.accessToken);",
+                  "pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "pm.test('Login successful', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(json.accessToken).to.not.be.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+          }
+        },
+        {
+          "name": "Register MAKER User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"maker1\",\n  \"email\": \"maker1@minipay.com\",\n  \"password\": \"Maker@1234\",\n  \"role\": \"MAKER\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
+          }
+        },
+        {
+          "name": "Register CHECKER User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"checker1\",\n  \"email\": \"checker1@minipay.com\",\n  \"password\": \"Checker@1234\",\n  \"role\": \"CHECKER\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
+          }
+        },
+        {
+          "name": "Login as MAKER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('makerToken', json.accessToken);",
+                  "pm.test('MAKER login successful', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"maker1\",\n  \"password\": \"Maker@1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "  pm.collectionVariables.set('token', json.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}",
+                  "pm.test('Token refreshed', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api","auth","refresh"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "2. Merchants",
+      "item": [
+        {
+          "name": "Create Merchant (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.merchantId) {",
+                  "  pm.collectionVariables.set('merchantId', json.merchantId);",
+                  "  console.log('merchantId saved:', json.merchantId);",
+                  "}",
+                  "pm.test('Merchant created', () => pm.response.to.have.status(201));",
+                  "pm.test('Has merchantId', () => pm.expect(json.merchantId).to.match(/^MRC-/));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Retail Ltd\",\n  \"email\": \"acme@retail.com\",\n  \"settlementAccount\": \"0123456789\",\n  \"settlementBank\": \"First Bank\",\n  \"callbackUrl\": \"https://webhook.site/your-unique-url\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/merchants", "host": ["{{baseUrl}}"], "path": ["api","merchants"] }
+          }
+        },
+        {
+          "name": "Get Merchant",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/merchants/{{merchantId}}", "host": ["{{baseUrl}}"], "path": ["api","merchants","{{merchantId}}"] }
+          }
+        },
+        {
+          "name": "Update Merchant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Retail Ltd Updated\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/merchants/{{merchantId}}", "host": ["{{baseUrl}}"], "path": ["api","merchants","{{merchantId}}"] }
+          }
+        },
+        {
+          "name": "List Merchants",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/merchants?status=ACTIVE&page=0&size=10",
+              "host": ["{{baseUrl}}"], "path": ["api","merchants"],
+              "query": [
+                { "key": "status", "value": "ACTIVE" },
+                { "key": "page",   "value": "0" },
+                { "key": "size",   "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Configure Charge Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Charge settings saved', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('VAT rate correct', () => pm.expect(json.vatRate).to.eql(7.5));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"percentageFee\": 1.5,\n  \"fixedFee\": 50,\n  \"useFixedMsc\": false,\n  \"mscCap\": 2000,\n  \"vatRate\": 7.5,\n  \"platformProviderRate\": 1.0,\n  \"platformProviderCap\": 1200\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/merchants/{{merchantId}}/charge-settings", "host": ["{{baseUrl}}"], "path": ["api","merchants","{{merchantId}}","charge-settings"] }
+          }
+        },
+        {
+          "name": "Get Charge Settings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/merchants/{{merchantId}}/charge-settings", "host": ["{{baseUrl}}"], "path": ["api","merchants","{{merchantId}}","charge-settings"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "3. Payments",
+      "item": [
+        {
+          "name": "Initiate Payment — Spec Example 1 (₦100,000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('paymentRef', json.paymentRef);",
+                  "pm.test('Payment created', () => pm.response.to.have.status(201));",
+                  "pm.test('Status is PENDING', () => pm.expect(json.status).to.eql('PENDING'));",
+                  "pm.test('MSC = 1550', () => pm.expect(json.msc).to.eql(1550.00));",
+                  "pm.test('VAT = 116.25', () => pm.expect(json.vatAmount).to.eql(116.25));",
+                  "pm.test('Processor fee = 1000', () => pm.expect(json.processorFee).to.eql(1000.00));",
+                  "pm.test('Processor VAT = 75', () => pm.expect(json.processorVat).to.eql(75.00));",
+                  "pm.test('Amount payable = 97258.75', () => pm.expect(json.amountPayable).to.eql(97258.75));",
+                  "console.log('paymentRef saved:', json.paymentRef);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",   "value": "application/json" },
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Idempotency-Key","value": "order-001-attempt-1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"orderId\": \"ORDER-001\",\n  \"amount\": 100000,\n  \"currency\": \"NGN\",\n  \"channel\": \"CARD\",\n  \"customerId\": \"CUST-001\",\n  \"callbackUrl\": \"https://webhook.site/your-unique-url\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api","payments"] }
+          }
+        },
+        {
+          "name": "Initiate Payment — Spec Example 2 (₦50,000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.test('Payment created', () => pm.response.to.have.status(201));",
+                  "pm.test('MSC = 1000 (capped)', () => pm.expect(json.msc).to.eql(1000.00));",
+                  "pm.test('VAT = 75', () => pm.expect(json.vatAmount).to.eql(75.00));",
+                  "pm.test('Amount payable = 48495', () => pm.expect(json.amountPayable).to.eql(48495.00));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Temporarily switch to Spec Example 2 charge settings before running",
+                  "// percentageFee:3%, cap:1000, fixed:0, vat:7.5%, provRate:0.8%, provCap:500"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",   "value": "application/json" },
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Idempotency-Key","value": "order-002-attempt-1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"orderId\": \"ORDER-002\",\n  \"amount\": 50000,\n  \"currency\": \"NGN\",\n  \"channel\": \"WALLET\",\n  \"customerId\": \"CUST-002\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api","payments"] }
+          }
+        },
+        {
+          "name": "Test Idempotency — Same Key Returns Same Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "var saved = pm.collectionVariables.get('paymentRef');",
+                  "pm.test('Same paymentRef returned', () => pm.expect(json.paymentRef).to.eql(saved));",
+                  "pm.test('No duplicate created', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",   "value": "application/json" },
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Idempotency-Key","value": "order-001-attempt-1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"orderId\": \"ORDER-001\",\n  \"amount\": 100000,\n  \"currency\": \"NGN\",\n  \"channel\": \"CARD\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api","payments"] }
+          }
+        },
+        {
+          "name": "Get Payment by Ref",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/payments/{{paymentRef}}", "host": ["{{baseUrl}}"], "path": ["api","payments","{{paymentRef}}"] }
+          }
+        },
+        {
+          "name": "List Payments",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments?merchantId={{merchantId}}&status=PENDING&page=0&size=10",
+              "host": ["{{baseUrl}}"], "path": ["api","payments"],
+              "query": [
+                { "key": "merchantId", "value": "{{merchantId}}" },
+                { "key": "status",     "value": "PENDING" },
+                { "key": "channel",    "value": "CARD", "disabled": true },
+                { "key": "page",       "value": "0" },
+                { "key": "size",       "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Simulate Callback — SUCCESS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.test('Status is SUCCESS', () => pm.expect(json.status).to.eql('SUCCESS'));",
+                  "pm.test('Response 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentRef\": \"{{paymentRef}}\",\n  \"status\": \"SUCCESS\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/simulate/processor-callback", "host": ["{{baseUrl}}"], "path": ["api","simulate","processor-callback"] }
+          }
+        },
+        {
+          "name": "Simulate Callback — FAILED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentRef\": \"REPLACE-WITH-A-PENDING-PAYMENT-REF\",\n  \"status\": \"FAILED\",\n  \"failureReason\": \"Insufficient funds\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/simulate/processor-callback", "host": ["{{baseUrl}}"], "path": ["api","simulate","processor-callback"] }
+          }
+        },
+        {
+          "name": "Guard — Cannot Transition Completed Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400 Business Rule Violation', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().title).to.eql('Business Rule Violation');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentRef\": \"{{paymentRef}}\",\n  \"status\": \"FAILED\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/simulate/processor-callback", "host": ["{{baseUrl}}"], "path": ["api","simulate","processor-callback"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "4. Settlements",
+      "item": [
+        {
+          "name": "Generate Settlement Batches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                  "pm.test('At least 1 batch created', () => pm.expect(json.batchesCreated).to.be.at.least(1));",
+                  "console.log('Batches created:', json.batchesCreated, '| Transactions:', json.totalTransactions);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set today's date automatically",
+                  "var today = new Date().toISOString().split('T')[0];",
+                  "pm.collectionVariables.set('todayDate', today);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/settlements/generate?from={{todayDate}}&to={{todayDate}}",
+              "host": ["{{baseUrl}}"], "path": ["api","settlements","generate"],
+              "query": [
+                { "key": "from", "value": "{{todayDate}}" },
+                { "key": "to",   "value": "{{todayDate}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Settlement Batches",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/settlements?merchantId={{merchantId}}&page=0&size=10",
+              "host": ["{{baseUrl}}"], "path": ["api","settlements"],
+              "query": [
+                { "key": "merchantId", "value": "{{merchantId}}" },
+                { "key": "page",       "value": "0" },
+                { "key": "size",       "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Settlement Detail (with line items)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Paste a settlementRef UUID here, or run List Settlements first",
+                  "// and copy a ref from the response"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/settlements/{{settlementRef}}", "host": ["{{baseUrl}}"], "path": ["api","settlements","{{settlementRef}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "5. Reports & Exports",
+      "item": [
+        {
+          "name": "Transaction Report — JSON",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/transactions?merchantId={{merchantId}}&page=0&size=20",
+              "host": ["{{baseUrl}}"], "path": ["api","reports","transactions"],
+              "query": [
+                { "key": "merchantId", "value": "{{merchantId}}" },
+                { "key": "status",     "value": "SUCCESS", "disabled": true },
+                { "key": "channel",    "value": "CARD",    "disabled": true },
+                { "key": "page",       "value": "0" },
+                { "key": "size",       "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Transaction Report — CSV Download",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/transactions?format=CSV",
+              "host": ["{{baseUrl}}"], "path": ["api","reports","transactions"],
+              "query": [{ "key": "format", "value": "CSV" }]
+            }
+          }
+        },
+        {
+          "name": "Transaction Report — Excel Download",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/transactions?format=XLSX",
+              "host": ["{{baseUrl}}"], "path": ["api","reports","transactions"],
+              "query": [{ "key": "format", "value": "XLSX" }]
+            }
+          }
+        },
+        {
+          "name": "Settlement Report — JSON",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/settlements?merchantId={{merchantId}}&page=0&size=20",
+              "host": ["{{baseUrl}}"], "path": ["api","reports","settlements"],
+              "query": [
+                { "key": "merchantId", "value": "{{merchantId}}" },
+                { "key": "page",       "value": "0" },
+                { "key": "size",       "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Settlement Report — CSV Download",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/settlements?format=CSV",
+              "host": ["{{baseUrl}}"], "path": ["api","reports","settlements"],
+              "query": [{ "key": "format", "value": "CSV" }]
+            }
+          }
+        },
+        {
+          "name": "Settlement Report — Excel Download",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/settlements?format=XLSX",
+              "host": ["{{baseUrl}}"], "path": ["api","reports","settlements"],
+              "query": [{ "key": "format", "value": "XLSX" }]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "6. MAKER-CHECKER Approval Flow",
+      "item": [
+        {
+          "name": "MAKER — Create Merchant (Queued for Approval)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.test('Accepted for approval (202)', () => pm.response.to.have.status(202));",
+                  "if (json.requestRef) {",
+                  "  pm.collectionVariables.set('requestRef', json.requestRef);",
+                  "  console.log('requestRef saved:', json.requestRef);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{makerToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pending Merchant Co\",\n  \"email\": \"pending@merchant.com\",\n  \"settlementAccount\": \"9876543210\",\n  \"settlementBank\": \"GTBank\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/merchants", "host": ["{{baseUrl}}"], "path": ["api","merchants"] }
+          }
+        },
+        {
+          "name": "CHECKER — List Pending Approvals",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals?page=0&size=10",
+              "host": ["{{baseUrl}}"], "path": ["api","approvals"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "CHECKER — Get Approval Request Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/approvals/{{requestRef}}", "host": ["{{baseUrl}}"], "path": ["api","approvals","{{requestRef}}"] }
+          }
+        },
+        {
+          "name": "CHECKER — Approve Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Merchant created after approval', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Has merchantId', () => pm.expect(json.merchantId).to.match(/^MRC-/));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Verified business documents — approved\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/approvals/{{requestRef}}/approve", "host": ["{{baseUrl}}"], "path": ["api","approvals","{{requestRef}}","approve"] }
+          }
+        },
+        {
+          "name": "CHECKER — Reject Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Documents incomplete — resubmit with CAC registration\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/approvals/{{requestRef}}/reject", "host": ["{{baseUrl}}"], "path": ["api","approvals","{{requestRef}}","reject"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "7. Health & Misc",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('App is UP', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('UP');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator","health"] }
+          }
+        },
+        {
+          "name": "Swagger UI (open in browser)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/swagger-ui", "host": ["{{baseUrl}}"], "path": ["swagger-ui"] }
+          }
+        }
+      ]
+    }
+
+  ]
+}
