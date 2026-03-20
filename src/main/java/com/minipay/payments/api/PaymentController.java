@@ -37,7 +37,7 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/api/payments/{paymentRef}")
+    @GetMapping("/api/v1/payments/{paymentRef}")
     @Operation(summary = "Get payment by reference UUID")
     public ResponseEntity<PaymentResponse> getPayment(@PathVariable UUID paymentRef) {
         return ResponseEntity.ok(paymentService.getPayment(paymentRef));
