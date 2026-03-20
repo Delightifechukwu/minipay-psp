@@ -117,7 +117,6 @@ class PaymentServiceTest {
     @Test
     @DisplayName("initiatePayment throws when merchant is INACTIVE")
     void initiatePayment_inactiveMerchant_throws() {
-        when(paymentRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
         Merchant inactive = Merchant.builder()
                 .id(2L).merchantId("MRC-002").status("INACTIVE")
                 .name("Inactive").email("i@i.com")
@@ -133,7 +132,6 @@ class PaymentServiceTest {
     @Test
     @DisplayName("initiatePayment throws when charge settings not configured")
     void initiatePayment_noChargeSettings_throws() {
-        when(paymentRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
         when(merchantService.findOrThrow("MRC-001")).thenReturn(activeMerchant);
         when(chargeSettingRepository.findByMerchant(activeMerchant)).thenReturn(Optional.empty());
 
