@@ -11,6 +11,7 @@ public interface WebhookEventRepository extends JpaRepository<WebhookEvent, Long
 
     @Query("""
         SELECT w FROM WebhookEvent w
+        JOIN FETCH w.merchant
         WHERE w.status = 'PENDING'
           AND (w.nextRetryAt IS NULL OR w.nextRetryAt <= :now)
         ORDER BY w.createdAt ASC
