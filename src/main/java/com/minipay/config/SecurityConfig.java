@@ -35,13 +35,15 @@ public class SecurityConfig {
 
     private final UserRepository userRepository;
     private final JwtAuthFilter jwtAuthFilter;
+    private final String allowedOrigins;
 
-    @Value("${app.cors.allowed-origins:http://localhost:3000}")
-    private String allowedOrigins;
-
-    public SecurityConfig(UserRepository userRepository, @Lazy JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(
+            UserRepository userRepository,
+            @Lazy JwtAuthFilter jwtAuthFilter,
+            @Value("${app.cors.allowed-origins:http://localhost:3000}") String allowedOrigins) {
         this.userRepository = userRepository;
         this.jwtAuthFilter = jwtAuthFilter;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Bean

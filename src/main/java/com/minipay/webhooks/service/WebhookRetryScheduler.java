@@ -8,13 +8,17 @@ import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.List;
 
 /**
  * Polls for due webhook events and delivers them with exponential backoff.
+ *
+ * <p>Each event is delivered in its own transaction so a failure on one event
+ * does not roll back the status updates of previously delivered events in the
+ * same poll cycle.
  *
  * <p>Retry schedule (initial 1s, multiplier 2.0, max 30s):
  * <ul>
@@ -32,22 +36,26 @@ import java.util.List;
 @Slf4j
 public class WebhookRetryScheduler {
 
-    private static final long INITIAL_DELAY_MS    = 1_000L;
-    private static final double BACKOFF_MULTIPLIER = 2.0;
-    private static final long MAX_DELAY_MS        = 30_000L;
+    private static final long   INITIAL_DELAY_MS    = 1_000L;
+    private static final double BACKOFF_MULTIPLIER  = 2.0;
+    private static final long   MAX_DELAY_MS        = 30_000L;
 
     private final WebhookEventRepository webhookEventRepository;
-    private final WebhookHttpDelivery webhookHttpDelivery;
+    private final WebhookHttpDelivery    webhookHttpDelivery;
+    private final TransactionTemplate    transactionTemplate;
 
     @Scheduled(fixedDelay = 5000)
     @SchedulerLock(name = "webhookRetryScheduler", lockAtMostFor = "PT4S", lockAtLeastFor = "PT1S")
-    @Transactional
     public void processQueue() {
         List<WebhookEvent> dueEvents = webhookEventRepository.findDueForRetry(Instant.now());
         if (!dueEvents.isEmpty()) {
             log.debug("Processing {} due webhook events", dueEvents.size());
         }
-        dueEvents.forEach(this::deliver);
+        // Each event gets its own transaction — failure on one does not affect others
+        dueEvents.forEach(event -> transactionTemplate.execute(status -> {
+            deliver(event);
+            return null;
+        }));
     }
 
     private void deliver(WebhookEvent event) {
