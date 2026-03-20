@@ -53,7 +53,7 @@ jobs:
           cache: maven
 
       - name: Build & Run Tests
-        run: mvn -B verify --no-transfer-progress
+        run: mvn -B verify --no-transfer-progress -Djacoco.minimum.coverage=0.80
         env:
           DB_URL:      jdbc:postgresql://localhost:5432/minipay_ci
           DB_USER:     minipay

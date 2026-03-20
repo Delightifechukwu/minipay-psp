@@ -28,7 +28,7 @@
     <poi.version>5.2.5</poi.version>
     <jacoco.version>0.8.12</jacoco.version>
     <checkstyle.version>3.3.1</checkstyle.version>
-    <jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
+    <jacoco.minimum.coverage>0.70</jacoco.minimum.coverage>
   </properties>
 
   <dependencies>
