@@ -29,8 +29,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         WHERE (cast(:merchantId as String) IS NULL OR p.merchant.merchantId = cast(:merchantId as String))
           AND (cast(:channel as String)   IS NULL OR p.channel = cast(:channel as String))
           AND (cast(:status as String)    IS NULL OR p.status  = cast(:status as String))
-          AND (cast(:from as Instant)     IS NULL OR p.createdAt >= cast(:from as Instant))
-          AND (cast(:to as Instant)       IS NULL OR p.createdAt <= cast(:to as Instant))
+          AND p.createdAt >= :from
+          AND p.createdAt <= :to
         """)
     Page<Payment> findByFilters(
             @Param("merchantId") String merchantId,
@@ -58,8 +58,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         WHERE (cast(:merchantId as String) IS NULL OR p.merchant.merchantId = cast(:merchantId as String))
           AND (cast(:channel as String)   IS NULL OR p.channel = cast(:channel as String))
           AND (cast(:status as String)    IS NULL OR p.status  = cast(:status as String))
-          AND (cast(:from as Instant)     IS NULL OR p.createdAt >= cast(:from as Instant))
-          AND (cast(:to as Instant)       IS NULL OR p.createdAt <= cast(:to as Instant))
+          AND p.createdAt >= :from
+          AND p.createdAt <= :to
         ORDER BY p.createdAt DESC
         """)
     List<Payment> findForExport(

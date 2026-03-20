@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -49,7 +50,10 @@ public class ReportingService {
                 ? Sort.Direction.DESC : Sort.Direction.ASC, f.getSortBy());
         Pageable pageable = PageRequest.of(f.getPage(), f.getSize(), sort);
         Page<Payment> page = paymentRepository.findByFilters(
-                f.getMerchantId(), f.getChannel(), f.getStatus(), f.getFrom(), f.getTo(), pageable);
+                f.getMerchantId(), f.getChannel(), f.getStatus(),
+                f.getFrom() != null ? f.getFrom() : Instant.EPOCH,
+                f.getTo()   != null ? f.getTo()   : Instant.parse("9999-12-31T23:59:59Z"),
+                pageable);
         return PageResponse.of(page.map(paymentService::toResponse));
     }
 
@@ -68,7 +72,9 @@ public class ReportingService {
     @Transactional(readOnly = true)
     public byte[] exportTransactionsCsv(TransactionReportFilter f) throws IOException {
         List<Payment> payments = paymentRepository.findForExport(
-                f.getMerchantId(), f.getChannel(), f.getStatus(), f.getFrom(), f.getTo());
+                f.getMerchantId(), f.getChannel(), f.getStatus(),
+                f.getFrom() != null ? f.getFrom() : Instant.EPOCH,
+                f.getTo()   != null ? f.getTo()   : Instant.parse("9999-12-31T23:59:59Z"));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (CSVWriter csv = new CSVWriter(new OutputStreamWriter(out))) {
@@ -103,7 +109,9 @@ public class ReportingService {
     @Transactional(readOnly = true)
     public byte[] exportTransactionsExcel(TransactionReportFilter f) throws IOException {
         List<Payment> payments = paymentRepository.findForExport(
-                f.getMerchantId(), f.getChannel(), f.getStatus(), f.getFrom(), f.getTo());
+                f.getMerchantId(), f.getChannel(), f.getStatus(),
+                f.getFrom() != null ? f.getFrom() : Instant.EPOCH,
+                f.getTo()   != null ? f.getTo()   : Instant.parse("9999-12-31T23:59:59Z"));
 
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Transactions");

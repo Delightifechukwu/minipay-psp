@@ -142,8 +142,8 @@ public class PaymentService {
                 filter.getMerchantId(),
                 filter.getChannel(),
                 filter.getStatus(),
-                filter.getFrom(),
-                filter.getTo(),
+                filter.getFrom()  != null ? filter.getFrom()  : Instant.EPOCH,
+                filter.getTo()    != null ? filter.getTo()    : Instant.parse("9999-12-31T23:59:59Z"),
                 pageable);
 
         return PageResponse.of(page.map(this::toResponse));
